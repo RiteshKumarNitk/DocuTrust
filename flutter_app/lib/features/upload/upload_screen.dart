@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,6 +16,7 @@ class UploadScreen extends ConsumerStatefulWidget {
 class _UploadScreenState extends ConsumerState<UploadScreen> {
   final _picker = ImagePicker();
   XFile? _selectedFile;
+  Uint8List? _selectedBytes;
   String _selectedType = 'PAN';
 
   @override
@@ -41,7 +43,11 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
               decoration: const InputDecoration(labelText: 'Document type'),
             ),
             const SizedBox(height: 24),
-            _UploadZone(selectedFile: _selectedFile, isLoading: state.isLoading),
+            _UploadZone(
+              selectedFile: _selectedFile,
+              selectedBytes: _selectedBytes,
+              isLoading: state.isLoading,
+            ),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: state.isLoading ? null : () => _pickAndUpload(context, ref),
@@ -67,19 +73,32 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     final image = await _picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
 
-    setState(() => _selectedFile = image);
-    final docId = await ref.read(uploadProvider.notifier).upload(image.path, _selectedType);
+    final bytes = await image.readAsBytes();
+
+    setState(() {
+      _selectedFile = image;
+      _selectedBytes = bytes;
+    });
+
+    final docId = await ref.read(uploadProvider.notifier).upload(
+          file: image,
+          docType: _selectedType,
+          bytes: bytes,
+        );
+
     if (docId != null && context.mounted) {
       Navigator.pushNamed(context, '/result', arguments: docId);
     }
   }
 }
 
+
 class _UploadZone extends StatelessWidget {
   final XFile? selectedFile;
+  final Uint8List? selectedBytes;
   final bool isLoading;
 
-  const _UploadZone({this.selectedFile, required this.isLoading});
+  const _UploadZone({this.selectedFile, this.selectedBytes, required this.isLoading});
 
   @override
   Widget build(BuildContext context) {
@@ -94,11 +113,14 @@ class _UploadZone extends StatelessWidget {
           if (selectedFile != null)
             Column(
               children: [
-                Image.file(
-                  File(selectedFile!.path),
-                  height: 150,
-                  fit: BoxFit.contain,
-                ),
+                if (selectedBytes != null)
+                  Image.memory(
+                    selectedBytes!,
+                    height: 150,
+                    fit: BoxFit.contain,
+                  )
+                else
+                  const SizedBox(height: 150, child: Center(child: CircularProgressIndicator())),
                 const SizedBox(height: 10),
                 Text(selectedFile!.name, style: const TextStyle(fontSize: 12)),
               ],

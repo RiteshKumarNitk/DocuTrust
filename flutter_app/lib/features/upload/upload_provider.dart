@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/api/api_client.dart';
 
 class UploadState {
@@ -20,10 +23,19 @@ class UploadNotifier extends StateNotifier<UploadState> {
 
   final ApiClient _client;
 
-  Future<String?> upload(String filePath, String docType) async {
+  Future<String?> upload({
+    required XFile file,
+    required String docType,
+    Uint8List? bytes,
+  }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final docId = await _client.uploadDocument(filePath, docType);
+      final docId = await _client.uploadDocument(
+        docType: docType,
+        fileName: file.name,
+        filePath: file.path,
+        fileBytes: bytes,
+      );
       return docId;
     } catch (e) {
       state = state.copyWith(error: e.toString());

@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiClient {
+  // Ensure this matches the port your backend is running on (e.g. 3000 or 3001).
   static const _baseUrl = 'http://localhost:3000/api';
   late final Dio _dio;
   final _storage = const FlutterSecureStorage();
@@ -32,9 +35,16 @@ class ApiClient {
     );
   }
 
-  Future<String> uploadDocument(String filePath, String docType) async {
+  Future<String> uploadDocument({
+    required String docType,
+    required String fileName,
+    String? filePath,
+    Uint8List? fileBytes,
+  }) async {
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(filePath),
+      'file': fileBytes != null
+          ? MultipartFile.fromBytes(fileBytes, filename: fileName)
+          : await MultipartFile.fromFile(filePath!),
       'type': docType,
     });
 
