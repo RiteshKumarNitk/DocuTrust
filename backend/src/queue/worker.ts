@@ -37,7 +37,7 @@ const worker = new Worker<JobData>(
     await prisma.document.update({
       where: { id: documentId },
       data: {
-        extracted: parsed as any,
+        extracted: JSON.stringify(parsed),
         score,
         result: score >= 70 ? "APPROVED" : "REJECTED",
         status: "DONE",

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum DocStatus { pending, processing, done, failed }
 enum DocResult { approved, rejected, unknown }
 
@@ -24,7 +26,7 @@ class DocumentModel {
       status: _parseStatus(json['status'] as String),
       score: json['score'] as int?,
       result: _parseResult(json['result'] as String?),
-      extracted: json['extracted'] as Map<String, dynamic>?,
+      extracted: json['extracted'] != null ? jsonDecode(json['extracted'] as String) : null,
       errorMsg: json['errorMsg'] as String?,
     );
   }

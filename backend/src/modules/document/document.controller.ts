@@ -24,7 +24,6 @@ export const documentRouter = Router();
 
 documentRouter.post(
   "/upload",
-  requireAuth,
   upload.single("file"),
   async (req: AuthRequest, res) => {
     try {
@@ -39,23 +38,27 @@ documentRouter.post(
 
       // Default to local disk storage; if Cloudinary is configured we'll upload there
       let fileUrl = file.path;
+      let uploadedToCloudinary = false;
 
       if (CLOUDINARY_ENABLED) {
         try {
           fileUrl = await uploadToCloudinary(file.path);
+          uploadedToCloudinary = true;
         } catch (err) {
           // If Cloudinary upload fails, continue using the local file so processing can still work.
           // eslint-disable-next-line no-console
           console.warn("Cloudinary upload failed; falling back to local file storage", err);
-        } finally {
-          // Clean up the local copy if it exists
-          await fs.promises.unlink(file.path).catch(() => {
-            // ignore errors while deleting temporary upload
-          });
         }
       }
 
-      const doc = await createDocument(req.user!.id, fileUrl, type);
+      if (uploadedToCloudinary) {
+        // Clean up the local copy if uploaded to Cloudinary
+        await fs.promises.unlink(file.path).catch(() => {
+          // ignore errors while deleting temporary upload
+        });
+      }
+
+      const doc = await createDocument(req.user?.id ?? "demo-user", fileUrl, type);
       return success(res, {
         id: doc.id,
         status: doc.status,
@@ -67,9 +70,9 @@ documentRouter.post(
   },
 );
 
-documentRouter.get("/:id", requireAuth, async (req: AuthRequest, res) => {
+documentRouter.get("/:id", async (req: AuthRequest, res) => {
   try {
-    const doc = await getDocumentById(req.user!.id, req.params.id);
+    const doc = await getDocumentById(req.user?.id ?? "demo-user", req.params.id);
     if (!doc) {
       return fail(res, "Document not found", 404);
     }
@@ -79,9 +82,9 @@ documentRouter.get("/:id", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-documentRouter.get("/list", requireAuth, async (req: AuthRequest, res) => {
+documentRouter.get("/list", async (req: AuthRequest, res) => {
   try {
-    const docs = await listDocuments(req.user!.id);
+    const docs = await listDocuments(req.user?.id ?? "demo-user");
     return success(res, docs);
   } catch (error) {
     return fail(res, error);

@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -12,35 +12,18 @@ model User {
   email     String     @unique
   password  String
   createdAt DateTime   @default(now())
-  documents Document[]
 }
 
 model Document {
   id          String    @id @default(uuid())
   userId      String
   fileUrl     String
-  type        DocType
-  status      DocStatus @default(PENDING)
-  extracted   Json?
+  type        String
+  status      String    @default("PENDING")
+  extracted   String?
   score       Int?
   result      String?
   errorMsg    String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id])
-}
-
-enum DocType {
-  PAN
-  AADHAAR
-  SALARY_SLIP
-  BANK_STATEMENT
-}
-
-enum DocStatus {
-  PENDING
-  PROCESSING
-  DONE
-  FAILED
 }
